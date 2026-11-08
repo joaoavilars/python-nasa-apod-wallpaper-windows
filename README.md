@@ -1,133 +1,135 @@
-# NASA APOD como papel de parede (Windows)
+# NASA APOD as Wallpaper (Windows)
 
-Baixa a imagem do dia do [NASA APOD](https://science.nasa.gov/apod/) e a aplica como papel de parede
-no **Windows**.
+[🇧🇷 Português](README.pt-BR.md) | 🇺🇸 English
 
-## Referência
+Downloads the [NASA Astronomy Picture of the Day](https://science.nasa.gov/apod/) and sets it as
+your **Windows** wallpaper.
 
-Este projeto foi inspirado na extensão do GNOME
+## Reference
+
+This project was inspired by the GNOME extension
 [NASA APOD Wallpaper Changer](https://github.com/Elinvention/gnome-shell-extension-nasa-apod)
-(`nasa_apod@elinvention.ovh`), de Elinvention, e segue a mesma abordagem: o endpoint atual da NASA e
-opções como qualidade da imagem e miniatura de vídeos. Se você usa Linux com GNOME, use a extensão original.
+(`nasa_apod@elinvention.ovh`) by Elinvention, and follows the same approach: the current NASA endpoint
+and options such as image quality and video thumbnails. If you use Linux with GNOME, use the original extension.
 
-## Arquivos
+## Files
 
-| Arquivo | Função |
+| File | Purpose |
 |---|---|
-| `get_wall_day.py` | Baixa o APOD do dia, salva na pasta configurada (padrão: `Imagens\nasa` do seu usuário) como `APOD_AAAA-MM-DD.ext` e aplica a imagem mais recente como papel de parede. |
-| `get_all_walls.py` | Baixa um período (completa a coleção). Uso: `python get_all_walls.py [inicio] [fim]` (AAAA-MM-DD). Não troca o papel de parede. |
-| `apod_common.py` | Código compartilhado (leitura da configuração, download, aplicação do papel de parede). |
-| `config.json` | Sua configuração local (não vai para o Git). Criada a partir de `config.example.json`. |
-| `config.example.json` | Modelo de configuração com os valores padrão. |
-| `run_daily.bat` | Chama o `get_wall_day.py` a partir da própria pasta. É o que a tarefa agendada executa. |
-| `Download_NASA_APOD.xml` | Definição da tarefa agendada para importar no Agendador de Tarefas. |
+| `get_wall_day.py` | Downloads today's APOD, saves it to the configured folder (default: `Pictures\nasa` in your user profile) as `APOD_YYYY-MM-DD.ext`, and sets the most recent image as wallpaper. |
+| `get_all_walls.py` | Downloads a date range (to complete your collection). Usage: `python get_all_walls.py [start] [end]` (YYYY-MM-DD). Does not change the wallpaper. |
+| `apod_common.py` | Shared code (config loading, download, wallpaper setting). |
+| `config.json` | Your local settings (not tracked by Git). Created from `config.example.json`. |
+| `config.example.json` | Settings template with the default values. |
+| `run_daily.bat` | Runs `get_wall_day.py` from its own folder. This is what the scheduled task executes. |
+| `Download_NASA_APOD.xml` | Scheduled task definition to import into Task Scheduler. |
 
-## Configuração (`config.json`)
+## Configuration (`config.json`)
 
-Copie `config.example.json` para `config.json` e edite o que quiser. Opções omitidas usam o padrão.
-Se o arquivo não existir, os padrões são usados.
+Copy `config.example.json` to `config.json` and edit what you need. Omitted options use their defaults.
+If the file does not exist, all defaults are used.
 
-| Opção | Padrão | Descrição |
+| Option | Default | Description |
 |---|---|---|
-| `download_dir` | `%USERPROFILE%\Pictures\nasa` | Pasta onde as imagens são salvas. Aceita variáveis (`%USERPROFILE%`), `~` e caminho relativo (a partir da pasta do projeto). Use `\\` ou `/` no JSON. |
-| `set_wallpaper` | `true` | Se `false`, só baixa as imagens e não mexe no papel de parede. |
-| `wallpaper_style` | `"fill"` | Ajuste: `fill` (preencher), `fit` (ajustar), `stretch` (esticar), `tile` (lado a lado), `center` (centralizar), `span` (estender em vários monitores). |
-| `apply_only_when_new` | `false` | Se `true`, só troca o papel de parede quando baixa uma imagem nova. Assim uma troca manual sua não é desfeita nas outras execuções do dia. |
-| `image_quality` | `"hd"` | `hd` (original) ou `standard` (960 px de largura, como a extensão do GNOME em conexão limitada). |
-| `video_thumbnail` | `false` | Se `true`, em dias de vídeo usa a miniatura do YouTube em vez de pular o dia. |
-| `min_file_size_kb` | `10` | Arquivos menores que isso são descartados (placeholders, logo da NASA). |
-| `request_timeout_seconds` | `60` | Tempo máximo de espera por requisição. |
+| `download_dir` | `%USERPROFILE%\Pictures\nasa` | Folder where images are saved. Accepts environment variables (`%USERPROFILE%`), `~`, and relative paths (relative to the project folder). Use `\\` or `/` in JSON. |
+| `set_wallpaper` | `true` | If `false`, only downloads images and leaves the wallpaper alone. |
+| `wallpaper_style` | `"fill"` | Fit mode: `fill`, `fit`, `stretch`, `tile`, `center`, or `span` (across multiple monitors). |
+| `apply_only_when_new` | `false` | If `true`, the wallpaper changes only when a new image was downloaded, so a manual change is not undone by later runs on the same day. |
+| `image_quality` | `"hd"` | `hd` (original) or `standard` (960 px wide, like the GNOME extension on metered connections). |
+| `video_thumbnail` | `false` | If `true`, on video days the YouTube thumbnail is used instead of skipping the day. |
+| `min_file_size_kb` | `10` | Files smaller than this are discarded (placeholders, the NASA logo). |
+| `request_timeout_seconds` | `60` | Maximum wait per request. |
 
-Exemplo para guardar em outro disco:
+Example storing images on another drive:
 
 ```json
-{ "download_dir": "D:/Imagens/NASA", "apply_only_when_new": true }
+{ "download_dir": "D:/Pictures/NASA", "apply_only_when_new": true }
 ```
 
-## Fonte dos dados
+## Data source
 
-A NASA trocou a API. O script usa o endpoint atual, **sem API key**:
+NASA changed its API. The scripts use the current endpoint, with **no API key**:
 
-- Dia atual: `https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=1`
-- Dia específico: `https://science.nasa.gov/wp-json/wp/v2/apod-basic/AAMMDD` (ex.: `/261108`)
+- Latest: `https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=1`
+- Specific day: `https://science.nasa.gov/wp-json/wp/v2/apod-basic/YYMMDD` (e.g. `/261108`)
 
-Detalhes importantes:
+Things worth knowing:
 
-- A listagem só devolve os ~25 itens mais recentes; períodos maiores são consultados dia a dia.
-- O campo `url` é a página do artigo. A imagem está em `hdurl`, que vem com query string
-  (`?w=0&h=0&...`); os scripts removem tudo depois do `?`.
-- Vídeos são ignorados (ou usam a miniatura, com `video_thumbnail`). Arquivos menores que
-  `min_file_size_kb` são descartados (placeholders / logo da NASA).
+- The list endpoint only returns the ~25 most recent items; longer ranges are fetched day by day.
+- The `url` field is the article page. The image is in `hdurl`, which comes with a query string
+  (`?w=0&h=0&...`); the scripts strip everything after the `?`.
+- Videos are skipped (or use the thumbnail, with `video_thumbnail`). Files smaller than
+  `min_file_size_kb` are discarded (placeholders / NASA logo).
 
-## Requisitos
+## Requirements
 
-- Python 3 no PATH (`python --version`)
-- Dependências: `pip install -r requirements.txt` (apenas `requests`)
-- A pasta das imagens fica no `config.json`. No `Download_NASA_APOD.xml`, troque `C:\CAMINHO\DO\PROJETO`
-  pela pasta onde você salvou este projeto (nos campos `Command` e `WorkingDirectory`).
+- Python 3 on the PATH (`python --version`)
+- Dependencies: `pip install -r requirements.txt` (just `requests`)
+- Images folder is set in `config.json`. In `Download_NASA_APOD.xml`, replace `C:\PATH\TO\PROJECT`
+  with the folder where you saved this project (in both `Command` and `WorkingDirectory`).
 
-## Teste manual
+## Manual test
 
 ```powershell
-cd C:\CAMINHO\DO\PROJETO
+cd C:\PATH\TO\PROJECT
 python get_wall_day.py
 ```
 
-Saída esperada: `Sucesso: APOD_... salvo` (ou `A imagem de hoje ja foi baixada.`) e
-`Papel de parede aplicado: APOD_....jpg`.
+The script's messages are in Portuguese. Expected output: `Sucesso: imagem de ... salva em ...`
+(or `A imagem de hoje ja foi baixada.`) followed by `Papel de parede aplicado: APOD_....jpg`.
 
-## Agendar a execução diária
+## Schedule the daily run
 
-### Opção A: importar o XML (interface gráfica)
+### Option A: import the XML (GUI)
 
-1. Abra o **Agendador de Tarefas** (`taskschd.msc`).
-2. **Ação > Importar Tarefa...** e selecione `Download_NASA_APOD.xml`.
-3. Na aba **Geral**, confira que o usuário é o seu e que está marcado
-   **Executar somente quando o usuário estiver conectado** (necessário para trocar o papel de parede).
-4. Na aba **Ações**, confira o caminho do `run_daily.bat`.
-5. Clique **OK**.
+1. Open **Task Scheduler** (`taskschd.msc`).
+2. **Action > Import Task...** and select `Download_NASA_APOD.xml`.
+3. On the **General** tab, check that the user is you and that **Run only when user is logged on**
+   is selected (required to change the wallpaper).
+4. On the **Actions** tab, check the path to `run_daily.bat`.
+5. Click **OK**.
 
-Se já existir uma tarefa chamada `Download NASA APOD`, exclua-a antes ou renomeie a nova.
+If a task named `Download NASA APOD` already exists, delete it first or rename the new one.
 
-### Opção B: importar pelo terminal
+### Option B: import from the terminal
 
 ```powershell
-schtasks /Create /TN "Download NASA APOD" /XML "C:\CAMINHO\DO\PROJETO\Download_NASA_APOD.xml"
+schtasks /Create /TN "Download NASA APOD" /XML "C:\PATH\TO\PROJECT\Download_NASA_APOD.xml"
 ```
 
-Para executar na hora: `schtasks /Run /TN "Download NASA APOD"`
+To run it right away: `schtasks /Run /TN "Download NASA APOD"`
 
-### Quando a tarefa dispara
+### When the task runs
 
-- Todos os dias às 09:00.
-- 1 minuto após o logon.
-- Se o PC estava desligado no horário, roda assim que possível (`StartWhenAvailable`).
-- Só roda com rede disponível.
+- Every day at 09:00.
+- 1 minute after logon.
+- If the PC was off at the scheduled time, it runs as soon as possible (`StartWhenAvailable`).
+- Only when a network is available.
 
-Para mudar o horário, edite `<StartBoundary>` no XML (ou altere o gatilho no Agendador).
+To change the time, edit `<StartBoundary>` in the XML (or change the trigger in Task Scheduler).
 
-## Comportamento do papel de parede
+## Wallpaper behavior
 
-- Toda execução aplica a imagem `APOD_*` **mais recente** (pela data no nome), no ajuste de `wallpaper_style`.
-- Uma troca manual (Personalizar > Plano de fundo) **vale só até a próxima execução** da tarefa.
-  Para mantê-la, use `"apply_only_when_new": true` (a tarefa só troca quando sai imagem nova)
-  ou desative a tarefa temporariamente.
-- Aplicar uma imagem fixa desliga o slideshow do Windows. Se você religar o slideshow, a
-  próxima execução do script volta a sobrescrevê-lo.
-- Formatos aceitos para aplicar: jpg, jpeg, png, bmp. Gif e tif ficam na pasta, mas não são aplicados.
+- Every run sets the **most recent** `APOD_*` image (by the date in the filename), using `wallpaper_style`.
+- A manual change (Personalize > Background) **lasts only until the next run** of the task.
+  To keep it, use `"apply_only_when_new": true` (the task only changes the wallpaper when a new image
+  arrives) or temporarily disable the task.
+- Setting a fixed image turns off the Windows slideshow. If you turn the slideshow back on, the
+  next run of the script overrides it again.
+- Supported formats for setting as wallpaper: jpg, jpeg, png, bmp. GIF and TIFF stay in the folder but are not applied.
 
-## Licença
+## License
 
-[MIT](LICENSE). As imagens baixadas pertencem aos seus respectivos autores; consulte os créditos
-no site do [NASA APOD](https://science.nasa.gov/apod/) antes de redistribuí-las.
+[MIT](LICENSE). Downloaded images belong to their respective authors; check the credits on the
+[NASA APOD](https://science.nasa.gov/apod/) site before redistributing them.
 
-## Problemas comuns
+## Troubleshooting
 
-| Sintoma | Causa provável |
+| Symptom | Likely cause |
 |---|---|
-| `Hoje o APOD e video` | O APOD do dia é vídeo; mantém a última imagem. |
-| `arquivo suspeito (... bytes)` | A NASA devolveu um placeholder; nada é salvo. |
-| `Erro ao ler config.json` | JSON inválido (barras `\` simples, vírgula sobrando). Use `\\` ou `/`. |
-| Papel de parede não muda pela tarefa | Tarefa configurada para rodar sem sessão aberta; use "somente quando o usuário estiver conectado". |
+| `Hoje o APOD e video` | Today's APOD is a video; the last image is kept. |
+| `arquivo suspeito (... bytes)` | NASA returned a placeholder; nothing is saved. |
+| `Erro ao ler config.json` | Invalid JSON (single `\` backslashes, trailing comma). Use `\\` or `/`. |
+| Wallpaper does not change from the task | Task set to run without a logged-in session; use "Run only when user is logged on". |
 | `ModuleNotFoundError: requests` | `pip install -r requirements.txt`. |
-| `Python` não encontrado na tarefa | Use o caminho completo do `python.exe` em `run_daily.bat`. |
+| `python` not found in the task | Use the full path to `python.exe` in `run_daily.bat`. |
