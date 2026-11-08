@@ -1,0 +1,10 @@
+{
+  "download_dir": "%USERPROFILE%\\Pictures\\nasa",
+  "set_wallpaper": true,
+  "wallpaper_style": "fill",
+  "apply_only_when_new": false,
+  "image_quality": "hd",
+  "video_thumbnail": false,
+  "min_file_size_kb": 10,
+  "request_timeout_seconds": 60
+}
