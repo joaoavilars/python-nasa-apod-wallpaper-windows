@@ -94,9 +94,9 @@ function Install-Python {
     if ($winget) {
         Write-Host '    Instalando via winget...' -ForegroundColor Yellow
         & $winget.Source install --id Python.Python.3.12 -e --scope user --silent `
-            --accept-package-agreements --accept-source-agreements
+            --accept-package-agreements --accept-source-agreements | Out-Host   # Out-Host: não contaminar o valor de retorno
         $py = Resolve-Python
-        if ($py) { return $py }
+        if ($py) { return [string]$py }
         Write-Warning 'winget não concluiu a instalação; tentando o instalador do python.org.'
     }
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -113,7 +113,7 @@ function Install-Python {
         '/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_test=0', 'Include_launcher=1'
     Remove-Item $installer -Force -ErrorAction SilentlyContinue
     if ($p.ExitCode -ne 0) { throw "O instalador do Python terminou com código $($p.ExitCode)." }
-    return Resolve-Python
+    return [string](Resolve-Python)
 }
 
 # --- Passo elevado (chamado pelo próprio instalador via UAC) ---
@@ -143,7 +143,7 @@ if (-not $python) {
     }
     if (-not $go) { throw $msg }
     Write-Step 'Instalando o Python 3'
-    $python = Install-Python
+    $python = @(Install-Python | Where-Object { $_ })[-1]
     if (-not $python) { throw 'Python instalado, mas não localizado. Abra um novo PowerShell e rode o instalador novamente.' }
 }
 $pythonw = Join-Path (Split-Path $python) 'pythonw.exe'
