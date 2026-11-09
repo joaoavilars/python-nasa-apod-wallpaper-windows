@@ -14,13 +14,29 @@ and options such as image quality and video thumbnails. If you use Linux with GN
 
 ## Quick install
 
-Requires Windows and [Python 3](https://www.python.org/downloads/). In PowerShell, from the project folder:
+Requires Windows 10/11 and PowerShell (Windows PowerShell 5.1 is enough) and [Git](https://git-scm.com/download/win).
+Python 3 is **optional**: if it is missing, the installer offers to install it for you (winget, or the
+python.org installer as a fallback; per user, no admin rights).
+
+**1. Clone the repository** into a folder you will keep (the scheduled task points to it, so do not delete or move it later):
+
+```powershell
+git clone https://github.com/joaoavilars/python-nasa-apod-wallpaper-windows.git C:\nasa\python-nasa-apod-wallpaper-windows
+cd C:\nasa\python-nasa-apod-wallpaper-windows
+```
+
+No Git? Install it with `winget install --id Git.Git -e`, or download the ZIP from the GitHub page
+(**Code > Download ZIP**), extract it and `cd` into the extracted folder.
+
+**2. Run the installer locally**, in PowerShell, from the project folder:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-The installer finds Python, installs the dependencies, creates `config.json`, **asks where to save the
+To update later: `git pull origin main`, then run the installer again with `-Force`.
+
+The installer finds Python (or installs it, after asking), installs the dependencies, creates `config.json`, **asks where to save the
 images** (suggesting your Pictures folder, e.g. `C:\Users\you\Pictures\nasa`; press Enter to accept),
 registers the Windows Event Log source (one UAC prompt, only for this step), and creates the scheduled
 task (daily at 09:00 and 1 minute after logon, running windowless). The task points to the folder where the

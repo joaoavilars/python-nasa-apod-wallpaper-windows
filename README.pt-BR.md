@@ -14,13 +14,29 @@ opções como qualidade da imagem e miniatura de vídeos. Se você usa Linux com
 
 ## Instalação rápida
 
-Requer Windows e [Python 3](https://www.python.org/downloads/). No PowerShell, na pasta do projeto:
+Requer Windows 10/11, PowerShell (o Windows PowerShell 5.1 basta) e [Git](https://git-scm.com/download/win).
+O Python 3 é **opcional**: se não estiver instalado, o instalador oferece instalá-lo para você (winget ou, como
+alternativa, o instalador do python.org; por usuário, sem precisar de administrador).
+
+**1. Clone o repositório** em uma pasta que você vai manter (a tarefa agendada aponta para ela, então não apague nem mova depois):
+
+```powershell
+git clone https://github.com/joaoavilars/python-nasa-apod-wallpaper-windows.git C:\nasa\python-nasa-apod-wallpaper-windows
+cd C:\nasa\python-nasa-apod-wallpaper-windows
+```
+
+Sem Git? Instale com `winget install --id Git.Git -e`, ou baixe o ZIP na página do GitHub
+(**Code > Download ZIP**), extraia e entre na pasta extraída com `cd`.
+
+**2. Execute o instalador localmente**, no PowerShell, na pasta do projeto:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-O instalador localiza o Python, instala as dependências, cria o `config.json`, **pergunta onde salvar as
+Para atualizar depois: `git pull origin main` e rode o instalador de novo com `-Force`.
+
+O instalador localiza o Python (ou o instala, após perguntar), instala as dependências, cria o `config.json`, **pergunta onde salvar as
 imagens** (sugerindo a sua pasta de Imagens, ex.: `C:\Users\voce\Pictures\nasa`; basta dar Enter para
 confirmar), registra a origem no Log de Eventos do Windows (um pedido de UAC, só para esse passo) e cria a
 tarefa agendada (todos os dias às 09:00 e 1 minuto após o logon, sem abrir janela). A tarefa aponta para a
