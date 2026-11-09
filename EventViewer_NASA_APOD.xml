@@ -1,0 +1,16 @@
+<ViewerConfig>
+  <QueryConfig>
+    <QueryParams>
+      <UserQuery />
+    </QueryParams>
+    <QueryNode>
+      <Name>NASA APOD Wallpaper</Name>
+      <Description>Eventos do NASA APOD Wallpaper (origem NASA-APOD-Wallpaper)</Description>
+      <QueryList>
+        <Query Id="0" Path="Application">
+          <Select Path="Application">*[System[Provider[@Name='NASA-APOD-Wallpaper']]]</Select>
+        </Query>
+      </QueryList>
+    </QueryNode>
+  </QueryConfig>
+</ViewerConfig>

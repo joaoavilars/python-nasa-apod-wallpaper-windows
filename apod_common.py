@@ -1,13 +1,15 @@
 """Funcoes compartilhadas por get_wall_day.py e get_all_walls.py."""
 import ctypes
-import datetime as dt
 import glob
 import json
 import os
 import re
-import sys
 
 import requests
+
+from apod_log import (
+    DEFAULT_LOG_FILE, EV_NOTHING_TO_APPLY, EV_SUSPICIOUS_FILE, EV_WALLPAPER_ERROR,
+    EV_WALLPAPER_SET, ev, log)
 
 BASE_URL = "https://science.nasa.gov/wp-json/wp/v2/apod-basic"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
@@ -23,6 +25,8 @@ DEFAULTS = {
     "video_thumbnail": False,        # True: em dias de video, usa a miniatura do YouTube
     "min_file_size_kb": 10,          # abaixo disso o arquivo e descartado (placeholder/logo)
     "request_timeout_seconds": 60,
+    "log_to_event_log": True,        # escreve no Log de Eventos do Windows (Aplicativo)
+    "log_file": DEFAULT_LOG_FILE,    # arquivo de log com rotacao; "" desativa
 }
 
 # (WallpaperStyle, TileWallpaper) no registro do Windows
@@ -33,6 +37,10 @@ WALLPAPER_STYLES = {
 WALLPAPER_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
 
 
+class ConfigError(Exception):
+    pass
+
+
 def load_config():
     cfg = dict(DEFAULTS)
     if os.path.exists(CONFIG_PATH):
@@ -40,13 +48,11 @@ def load_config():
             with open(CONFIG_PATH, encoding="utf-8") as f:
                 cfg.update({k: v for k, v in json.load(f).items() if k in DEFAULTS})
         except (OSError, ValueError) as e:
-            sys.exit(f"Erro ao ler {CONFIG_PATH}: {e}")
-    else:
-        print(f"Aviso: config.json nao encontrado, usando valores padrao ({CONFIG_PATH})")
+            raise ConfigError(f"Erro ao ler {CONFIG_PATH}: {e}") from e
     if cfg["wallpaper_style"] not in WALLPAPER_STYLES:
-        sys.exit(f"wallpaper_style invalido: {cfg['wallpaper_style']} (use {', '.join(WALLPAPER_STYLES)})")
+        raise ConfigError(f"wallpaper_style inválido: {cfg['wallpaper_style']} (use {', '.join(WALLPAPER_STYLES)})")
     if cfg["image_quality"] not in ("hd", "standard"):
-        sys.exit("image_quality invalido (use 'hd' ou 'standard')")
+        raise ConfigError("image_quality inválido (use 'hd' ou 'standard')")
     # Expande ~ e variaveis de ambiente; caminhos relativos partem da pasta do projeto
     d = os.path.expanduser(os.path.expandvars(cfg["download_dir"]))
     cfg["download_dir"] = d if os.path.isabs(d) else os.path.join(APP_DIR, d)
@@ -78,26 +84,31 @@ def _image_url(item, cfg):
 
 
 def download_apod(item, cfg):
-    """Baixa a imagem do item. Retorna 'novo', 'existe', 'sem_imagem' ou 'suspeito'."""
+    """Baixa a imagem do item. Retorna (status, caminho):
+    status = 'novo', 'existe', 'sem_imagem' ou 'suspeito'."""
     date = item["date"]
     os.makedirs(cfg["download_dir"], exist_ok=True)
-    if glob.glob(os.path.join(cfg["download_dir"], f"APOD_{date}.*")):
-        return "existe"
+    existing = glob.glob(os.path.join(cfg["download_dir"], f"APOD_{date}.*"))
+    if existing:
+        return "existe", existing[0]
     url = _image_url(item, cfg)
     if not url:
-        return "sem_imagem"
+        return "sem_imagem", None
     ext = url.split("?")[0].rsplit(".", 1)[-1].lower()
     r = requests.get(url, headers=HEADERS, timeout=cfg["request_timeout_seconds"] * 2)
     if r.status_code != 200 or len(r.content) < cfg["min_file_size_kb"] * 1024:
-        print(f"{date}: arquivo suspeito (HTTP {r.status_code}, {len(r.content)} bytes): {url}")
-        return "suspeito"
-    with open(os.path.join(cfg["download_dir"], f"APOD_{date}.{ext}"), "wb") as f:
+        log.warning("%s: arquivo descartado por suspeita de placeholder (HTTP %s, %s bytes): %s",
+                    date, r.status_code, len(r.content), url, extra=ev(EV_SUSPICIOUS_FILE))
+        return "suspeito", None
+    path = os.path.join(cfg["download_dir"], f"APOD_{date}.{ext}")
+    with open(path, "wb") as f:
         f.write(r.content)
-    return "novo"
+    return "novo", path
 
 
 def apply_latest_wallpaper(cfg):
-    """Aplica a imagem APOD_* mais recente (pela data no nome) como papel de parede."""
+    """Aplica a imagem APOD_* mais recente (pela data no nome) como papel de parede.
+    Retorna o nome do arquivo aplicado, ou None."""
     import winreg
     d = cfg["download_dir"]
     files = sorted(
@@ -106,12 +117,18 @@ def apply_latest_wallpaper(cfg):
         and os.path.getsize(os.path.join(d, f)) >= cfg["min_file_size_kb"] * 1024
     ) if os.path.isdir(d) else []
     if not files:
-        print("Nenhuma imagem APOD valida encontrada para aplicar.")
-        return
+        log.warning("Nenhuma imagem APOD válida encontrada em %s para aplicar como papel de parede.",
+                    d, extra=ev(EV_NOTHING_TO_APPLY))
+        return None
     style, tile = WALLPAPER_STYLES[cfg["wallpaper_style"]]
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop", 0, winreg.KEY_SET_VALUE) as k:
         winreg.SetValueEx(k, "WallpaperStyle", 0, winreg.REG_SZ, style)
         winreg.SetValueEx(k, "TileWallpaper", 0, winreg.REG_SZ, tile)
     # SPI_SETDESKWALLPAPER = 20; UPDATEINIFILE | SENDCHANGE = 3
-    ok = ctypes.windll.user32.SystemParametersInfoW(20, 0, os.path.join(d, files[-1]), 3)
-    print(f"Papel de parede aplicado: {files[-1]}" if ok else "Falha ao aplicar o papel de parede.")
+    if not ctypes.windll.user32.SystemParametersInfoW(20, 0, os.path.join(d, files[-1]), 3):
+        log.error("O Windows recusou aplicar o papel de parede: %s", os.path.join(d, files[-1]),
+                  extra=ev(EV_WALLPAPER_ERROR))
+        return None
+    log.info("Papel de parede aplicado: %s (ajuste: %s)", files[-1], cfg["wallpaper_style"],
+             extra=ev(EV_WALLPAPER_SET))
+    return files[-1]
