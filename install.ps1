@@ -23,7 +23,8 @@ param(
     [string]$PythonPath,                        # caminho do python.exe (detectado se omitido)
     [string]$DownloadDir,                       # pasta das imagens (pergunta se omitido)
     [switch]$Yes,                               # aceita os valores sugeridos sem perguntar
-    [switch]$NoEventLog,                        # não registra no Log de Eventos
+    [switch]$NoInstallPython,                   # não oferece instalar o Python se ausente
+    [switch]$NoEventLog,                       # não registra no Log de Eventos
     [switch]$RunNow,                            # executa uma vez ao final
     [switch]$Force,                             # substitui a tarefa se já existir
     [switch]$DryRun,                            # só mostra o que seria feito
@@ -75,7 +76,44 @@ function Resolve-Python {
             if ($code -eq 0 -and $exe -and (Test-Path $exe)) { return $exe }
         } catch { }
     }
-    throw 'Python 3 não encontrado. Instale em https://www.python.org/downloads/ (marque "Add to PATH") ou use -PythonPath.'
+    # Instalações recém-feitas podem não estar no PATH da sessão atual: procura nos locais padrão
+    $roots = @("$env:LOCALAPPDATA\Programs\Python", "$env:ProgramFiles", "${env:ProgramFiles(x86)}")
+    foreach ($r in $roots) {
+        if (-not $r -or -not (Test-Path $r)) { continue }
+        $found = Get-ChildItem -Path $r -Directory -Filter 'Python3*' -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | ForEach-Object { Join-Path $_.FullName 'python.exe' } |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($found) { return $found }
+    }
+    return $null
+}
+
+function Install-Python {
+    # Instala o Python 3 para o usuário atual (sem UAC): primeiro via winget, depois baixando do python.org.
+    $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if ($winget) {
+        Write-Host '    Instalando via winget...' -ForegroundColor Yellow
+        & $winget.Source install --id Python.Python.3.12 -e --scope user --silent `
+            --accept-package-agreements --accept-source-agreements
+        $py = Resolve-Python
+        if ($py) { return $py }
+        Write-Warning 'winget não concluiu a instalação; tentando o instalador do python.org.'
+    }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' }
+    $ver = '3.12.10'
+    $url = "https://www.python.org/ftp/python/$ver/python-$ver-$arch.exe"
+    $installer = Join-Path $env:TEMP "python-$ver-$arch.exe"
+    Write-Host "    Baixando $url" -ForegroundColor Yellow
+    $oldProgress = $ProgressPreference; $ProgressPreference = 'SilentlyContinue'   # acelera o download no PS 5.1
+    try { Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing }
+    finally { $ProgressPreference = $oldProgress }
+    Write-Host '    Executando o instalador (silencioso, apenas para o usuário atual)...' -ForegroundColor Yellow
+    $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList `
+        '/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_test=0', 'Include_launcher=1'
+    Remove-Item $installer -Force -ErrorAction SilentlyContinue
+    if ($p.ExitCode -ne 0) { throw "O instalador do Python terminou com código $($p.ExitCode)." }
+    return Resolve-Python
 }
 
 # --- Passo elevado (chamado pelo próprio instalador via UAC) ---
@@ -94,6 +132,20 @@ if ($DryRun) { Write-Host 'MODO DRY-RUN: nada será alterado.' -ForegroundColor 
 # 1. Python e dependências
 Write-Step 'Procurando o Python'
 $python = Resolve-Python
+if (-not $python) {
+    $msg = 'Python 3 não encontrado. Instale em https://www.python.org/downloads/ (marque "Add to PATH") ou use -PythonPath.'
+    if ($PythonPath -or $NoInstallPython) { throw $msg }
+    if ($DryRun) { Write-Skip 'Python não encontrado: seria instalado automaticamente (winget ou python.org)' ; return }
+    $go = $Yes -or -not [Environment]::UserInteractive
+    if (-not $go) {
+        $a = Read-Host '    Python 3 não encontrado. Baixar e instalar agora (somente para o seu usuário)? [S/n]'
+        $go = ([string]::IsNullOrWhiteSpace($a) -or $a -match '^[sSyY]')
+    }
+    if (-not $go) { throw $msg }
+    Write-Step 'Instalando o Python 3'
+    $python = Install-Python
+    if (-not $python) { throw 'Python instalado, mas não localizado. Abra um novo PowerShell e rode o instalador novamente.' }
+}
 $pythonw = Join-Path (Split-Path $python) 'pythonw.exe'
 if (-not (Test-Path $pythonw)) { $pythonw = $python }
 Write-Ok "Python: $python"
