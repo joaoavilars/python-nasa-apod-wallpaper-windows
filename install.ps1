@@ -13,7 +13,7 @@
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\install.ps1
-  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Time 07:30 -RunNow
+  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Time 07:30 -NoRun
   powershell -ExecutionPolicy Bypass -File .\install.ps1 -DryRun
 #>
 [CmdletBinding()]
@@ -25,7 +25,8 @@ param(
     [switch]$Yes,                               # aceita os valores sugeridos sem perguntar
     [switch]$NoInstallPython,                   # não oferece instalar o Python se ausente
     [switch]$NoEventLog,                       # não registra no Log de Eventos
-    [switch]$RunNow,                            # executa uma vez ao final
+    [switch]$NoRun,                             # não executa a tarefa ao final (padrão: executa)
+    [switch]$RunNow,                            # (legado) agora é o padrão
     [switch]$Force,                             # substitui a tarefa se já existir
     [switch]$DryRun,                            # só mostra o que seria feito
     [switch]$OnlyEventSource                    # interno: passo elevado
@@ -250,7 +251,7 @@ if ($DryRun) {
     Write-Ok "Tarefa criada: diária às $Time e 1 minuto após o logon."
 }
 
-if ($RunNow) {
+if (-not $NoRun) {
     Write-Step 'Executando agora'
     if ($DryRun) { Write-Skip "Start-ScheduledTask '$TaskName'" }
     else { Start-ScheduledTask -TaskName $TaskName; Write-Ok 'Tarefa iniciada.' }

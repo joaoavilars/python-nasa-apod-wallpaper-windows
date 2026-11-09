@@ -31,7 +31,7 @@ project currently is, so if you move the project, run `install.ps1 -Force` again
 | `-DownloadDir D:\Pictures\NASA` | Images folder, without being asked. |
 | `-Yes` | Accepts the suggested values without prompting. |
 | `-Time 07:30` | Daily run time (default `09:00`). |
-| `-RunNow` | Runs the task once at the end. |
+| `-NoRun` | Skips the first run (by default the task runs once at the end to download and apply the wallpaper). |
 | `-Force` | Replaces the task if it already exists. |
 | `-TaskName "..."` | Custom task name. |
 | `-PythonPath C:\...\python.exe` | Use a specific Python. |

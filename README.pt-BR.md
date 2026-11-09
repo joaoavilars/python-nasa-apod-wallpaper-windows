@@ -31,7 +31,7 @@ pasta onde o projeto está agora; se você mover o projeto, rode `install.ps1 -F
 | `-DownloadDir D:\Imagens\NASA` | Pasta das imagens, sem perguntar. |
 | `-Yes` | Aceita os valores sugeridos, sem perguntar. |
 | `-Time 07:30` | Horário diário (padrão `09:00`). |
-| `-RunNow` | Executa a tarefa uma vez ao final. |
+| `-NoRun` | Não executa a primeira vez (por padrão a tarefa roda ao final para baixar e aplicar o papel de parede). |
 | `-Force` | Substitui a tarefa se ela já existir. |
 | `-TaskName "..."` | Nome personalizado da tarefa. |
 | `-PythonPath C:\...\python.exe` | Usa um Python específico. |
