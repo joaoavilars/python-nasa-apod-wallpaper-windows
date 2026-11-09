@@ -114,6 +114,28 @@ python get_wall_day.py
 Saída esperada: `Imagem de ... baixada: ...` (ou `A imagem de ... já havia sido baixada: ...`) e
 `Papel de parede aplicado: APOD_....jpg`.
 
+## Baixar imagens anteriores manualmente
+
+Para completar a coleção com imagens de dias anteriores, execute o `get_all_walls.py` **no PowerShell**
+(a expressão de data abaixo é sintaxe do PowerShell e não funciona no `cmd`). Ele baixa as imagens
+sem trocar o papel de parede; as já baixadas são ignoradas.
+
+Últimos 25 dias (hoje e os 24 anteriores):
+
+```powershell
+cd C:\CAMINHO\DO\PROJETO
+python .\get_all_walls.py (Get-Date).AddDays(-24).ToString('yyyy-MM-dd')
+```
+
+Troque `-24` por `-(N-1)` para os últimos N dias. Para um período específico (`AAAA-MM-DD`, data final opcional):
+
+```powershell
+python .\get_all_walls.py 2026-01-01 2026-01-31
+```
+
+Se o `python` não estiver no PATH da sessão atual, use o caminho completo, ex.:
+`& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" .\get_all_walls.py ...`.
+
 ## Logs e eventos do Windows
 
 Cada execução é registrada em dois lugares (e no console, quando rodada manualmente):

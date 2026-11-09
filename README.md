@@ -114,6 +114,28 @@ python get_wall_day.py
 The script's messages are in Portuguese. Expected output: `Imagem de ... baixada: ...` (or
 `A imagem de ... já havia sido baixada: ...`) followed by `Papel de parede aplicado: APOD_....jpg`.
 
+## Download past images manually
+
+To fill your collection with earlier pictures, run `get_all_walls.py` **in PowerShell** (the date
+expression below is PowerShell syntax and does not work in `cmd`). It downloads the images but does
+not change the wallpaper; images already downloaded are skipped.
+
+Last 25 days (today and the 24 before):
+
+```powershell
+cd C:\PATH\TO\PROJECT
+python .\get_all_walls.py (Get-Date).AddDays(-24).ToString('yyyy-MM-dd')
+```
+
+Change `-24` to `-(N-1)` for the last N days. For a specific range (`YYYY-MM-DD`, end date optional):
+
+```powershell
+python .\get_all_walls.py 2026-01-01 2026-01-31
+```
+
+If `python` is not on the PATH of the current session, use its full path, e.g.
+`& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" .\get_all_walls.py ...`.
+
 ## Logs and Windows events
 
 Every run is recorded in two places (plus the console when run manually):
